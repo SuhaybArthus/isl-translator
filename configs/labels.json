@@ -1,0 +1,20 @@
+{
+  "Alright": 0,
+  "Bird": 1,
+  "Cat": 2,
+  "Cow": 3,
+  "Dog": 4,
+  "Fish": 5,
+  "Friday": 6,
+  "Good Morning": 7,
+  "Good afternoon": 8,
+  "Hello": 9,
+  "How are you": 10,
+  "Monday": 11,
+  "Saturday": 12,
+  "Sunday": 13,
+  "Thursday": 14,
+  "Today": 15,
+  "Tuesday": 16,
+  "Wednesday": 17
+}
