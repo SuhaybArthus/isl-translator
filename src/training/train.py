@@ -10,7 +10,7 @@ from sklearn.metrics import f1_score
 from torch.utils.data import DataLoader
 
 from src.data.dataset import ISLDataset, build_label_map, ROOT
-from src.models.bilstm import BiLSTMClassifier
+from src.models.factory import build_model
 
 
 def evaluate(model, loader, device, k=5):
@@ -36,6 +36,7 @@ def evaluate(model, loader, device, k=5):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", default="bilstm")
+    ap.add_argument("--model", default="bilstm", choices=["bilstm", "transformer"])
     ap.add_argument("--epochs", type=int, default=100)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--lr", type=float, default=1e-3)
@@ -65,7 +66,7 @@ def main():
     test_dl = DataLoader(test_ds, batch_size=32, num_workers=0)
 
     input_dim = 225 if use_z else 150
-    model = BiLSTMClassifier(input_dim, len(lm), hidden=args.hidden).to(device)
+    model = build_model(args.model, input_dim, len(lm), hidden=args.hidden).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-2)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
     loss_fn = nn.CrossEntropyLoss(label_smoothing=0.1)
