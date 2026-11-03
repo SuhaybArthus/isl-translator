@@ -2,7 +2,7 @@
 .venv-onnx/
 .idea/
 __pycache__/
-data/
-models/
-outputs/
+/data/
+/models/
+/outputs/
 *.npy
