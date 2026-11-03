@@ -5,11 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="574a98f8-354c-4c26-859e-fee53fc75cf1" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/scripts/check_duplicates.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scripts/extract_keypoints.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scripts/make_splits.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/src/training/train.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/src/inference/preprocess.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/src/training/evaluate.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/test_preprocess.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/src/training/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/src/training/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,7 +24,7 @@
     </option>
   </component>
   <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/src" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory"><![CDATA[{
   "lastFilter": {
@@ -50,6 +50,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Python.check_duplicates.executor": "Run",
+    "Python.diagnose.executor": "Run",
     "Python.extract_keypoints.executor": "Run",
     "Python.make_splits.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",

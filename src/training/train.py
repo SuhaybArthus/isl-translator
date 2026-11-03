@@ -42,19 +42,22 @@ def main():
     ap.add_argument("--hidden", type=int, default=128)
     ap.add_argument("--seq_len", type=int, default=64)
     ap.add_argument("--p_mirror", type=float, default=0.0)
+    ap.add_argument("--p_hand_drop", type=float, default=0.0)
+    ap.add_argument("--fill_gaps", action="store_true")
     ap.add_argument("--no_z", action="store_true")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print("Device:", device)
+    print("Device:", device, "|", vars(args))
 
     mp = os.path.join(ROOT, "data", "processed", "manifest_split.csv")
     lm = build_label_map(mp)
     use_z = not args.no_z
-    common = dict(label_map=lm, seq_len=args.seq_len, use_z=use_z)
-    train_ds = ISLDataset(mp, "train", augment=True, p_mirror=args.p_mirror, **common)
+    common = dict(label_map=lm, seq_len=args.seq_len, use_z=use_z, fill=args.fill_gaps)
+    train_ds = ISLDataset(mp, "train", augment=True, p_mirror=args.p_mirror,
+                          p_hand_drop=args.p_hand_drop, **common)
     val_ds = ISLDataset(mp, "val", **common)
     test_ds = ISLDataset(mp, "test", **common)
     train_dl = DataLoader(train_ds, batch_size=args.batch, shuffle=True, num_workers=0)
@@ -90,7 +93,7 @@ def main():
             best_val = val["top1"]
             torch.save({"state_dict": model.state_dict(), "args": vars(args),
                         "label_map": lm, "input_dim": input_dim}, ckpt)
-        if ep % 5 == 0 or ep == 1:
+        if ep % 10 == 0 or ep == 1:
             print(f"ep {ep:3d} | loss {total / len(train_ds):.3f} | "
                   f"val top1 {val['top1']:.3f} f1 {val['macro_f1']:.3f}")
 
