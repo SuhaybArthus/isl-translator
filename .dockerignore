@@ -1,0 +1,7 @@
+.venv
+.venv-onnx
+.git
+data
+outputs
+notebooks
+__pycache__

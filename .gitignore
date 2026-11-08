@@ -5,4 +5,7 @@ __pycache__/
 /data/
 /models/
 /outputs/
+/models/*
+!/models/full_tf_s1.onnx
+!/models/full_tf_s1.meta.json
 *.npy
