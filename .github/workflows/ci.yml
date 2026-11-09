@@ -9,4 +9,4 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install numpy pytest
-      - run: python -m pytest tests/test_segment.py tests/test_preprocess_unit.py
+      - run: python -m pytest tests/test_segment.py tests/test_preprocess_unit.py tests/test_handedness.py

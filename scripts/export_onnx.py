@@ -40,7 +40,7 @@ def bench(fn, x, warmup=20, runs=200):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--name", required=True, help="checkpoint name in models/, e.g. full_bilstm")
+    ap.add_argument("--name", required=True, help="checkpoint name in models/, e.g. full_tf_s1")
     a = ap.parse_args()
 
     ck = torch.load(os.path.join(ROOT, "models", f"{a.name}.pt"), map_location="cpu")
@@ -57,6 +57,17 @@ def main():
     quantize_dynamic(fp32, int8, weight_type=QuantType.QInt8)
     print(f"Exported: {fp32} ({os.path.getsize(fp32) / 1e6:.2f} MB)")
     print(f"Quantized: {int8} ({os.path.getsize(int8) / 1e6:.2f} MB)")
+
+    # metadata the API reads, so serving can't drift from training settings
+    names = [None] * len(lm)
+    for k, v in lm.items():
+        names[v] = k
+    meta = {"checkpoint": a.name, "model": args.get("model", "bilstm"), "seq_len": seq_len,
+            "input_dim": feat, "use_z": not args["no_z"],
+            "fill_gaps": bool(args.get("fill_gaps", False)), "labels": names}
+    meta_path = os.path.join(ROOT, "models", f"{a.name}.meta.json")
+    json.dump(meta, open(meta_path, "w", encoding="utf-8"), indent=2)
+    print(f"Metadata: {meta_path}")
 
     so = ort.SessionOptions()
     s32 = ort.InferenceSession(fp32, so, providers=["CPUExecutionProvider"])

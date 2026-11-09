@@ -25,15 +25,18 @@ import onnxruntime as ort
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.staticfiles import StaticFiles
 
+from src.inference.handedness import hand_share, mirrored, wrist_motion, wrist_travel
 from src.inference.preprocess import preprocess_clip
 from src.inference.segment import SignSegmenter
 
-MODEL = os.environ.get("ISL_MODEL", "full_tf_s1")
+MODEL = os.environ.get("ISL_MODEL", "final_v1")
 VARIANT = os.environ.get("ISL_VARIANT", "")                       # "" = fp32, "_int8" = quantized
 CONF = float(os.environ.get("ISL_CONF", "0.5"))
 MIN_MOTION = float(os.environ.get("ISL_MIN_MOTION", "1.0"))       # shoulder widths of wrist travel
-HAND_K = float(os.environ.get("ISL_HAND_K", "1.25"))              # how clearly one wrist must lead
+HAND_K = float(os.environ.get("ISL_HAND_K", "1.5"))              # how clearly one wrist must lead
 RECORDING = os.environ.get("ISL_RECORDING", "1") == "1"                # set to 0 on any shared or public server
+MIN_HANDS = float(os.environ.get("ISL_MIN_HANDS", "0.5"))          # share of frames with a tracked hand
+NO_SIGN = "No sign"                                               # class for idle behaviour, if the model has it
 TOPK, N_FEAT = 5, 225
 
 meta = json.load(open(os.path.join(ROOT, "models", f"{MODEL}.meta.json"), encoding="utf-8"))
@@ -48,46 +51,6 @@ app = FastAPI(title="ISL recognition")
 def health():
     return {"status": "ok", "model": MODEL, "variant": VARIANT or "fp32",
             "classes": len(LABELS), "seq_len": meta["seq_len"]}
-
-
-# left/right swap for mirroring a sign (pose pairs, then left hand <-> right hand)
-PERM = np.arange(75)
-for a_, b_ in [(1, 4), (2, 5), (3, 6), (7, 8), (9, 10), (11, 12), (13, 14), (15, 16), (17, 18),
-               (19, 20), (21, 22), (23, 24), (25, 26), (27, 28), (29, 30), (31, 32)]:
-    PERM[a_], PERM[b_] = b_, a_
-for i_ in range(21):
-    PERM[33 + i_], PERM[54 + i_] = 54 + i_, 33 + i_
-
-
-def mirrored(x, use_z):
-    d = 3 if use_z else 2
-    m = x.reshape(len(x), 75, d).copy()
-    m[..., 0] *= -1
-    return m[:, PERM].reshape(x.shape)
-
-
-def wrist_travel(x, use_z):
-    """Wrist travel (left, right) in the preprocessed, shoulder-normalized clip."""
-    a = x.reshape(len(x), 75, 3 if use_z else 2)
-    out = []
-    for w in (15, 16):
-        p = a[:, w, :2]
-        ok = (p != 0).any(-1)
-        out.append(float((np.linalg.norm(np.diff(p, axis=0), axis=-1) * (ok[1:] & ok[:-1])).sum()))
-    return out
-
-
-def wrist_motion(seg):
-    """Total wrist travel in a raw segment, in shoulder widths (ignores jitter under 0.004)."""
-    sw = np.median(np.linalg.norm(seg[:, 33:35] - seg[:, 36:38], axis=1))
-    if sw < 1e-6:
-        return 0.0
-    total = 0.0
-    for c in (45, 48):
-        ok = (seg[:, c:c + 2] != 0).any(1)
-        d = np.linalg.norm(np.diff(seg[:, c:c + 2], axis=0), axis=1)[ok[1:] & ok[:-1]]
-        total += d[d > 0.004].sum()
-    return float(total / sw)
 
 
 def run_probs(x):
@@ -153,10 +116,14 @@ async def ws_endpoint(ws: WebSocket):
             await ws.send_json({"type": "state", "signing": was_active})
         if segment is not None:
             m = wrist_motion(segment)
-            if m < MIN_MOTION:
-                await ws.send_json({"type": "ignored", "motion": round(m, 2)})
-            else:
+            reason = "still" if m < MIN_MOTION else "hands" if hand_share(segment) < MIN_HANDS else None
+            if reason is None:
                 out = await asyncio.to_thread(predict, segment)
+                if out["top"][0]["label"] == NO_SIGN:
+                    reason = "no sign"
+            if reason:
+                await ws.send_json({"type": "ignored", "motion": round(m, 2), "reason": reason})
+            else:
                 out["motion"] = round(m, 2)
                 await ws.send_json(out)
 

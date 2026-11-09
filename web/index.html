@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ISL Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="intro" role="presentation">
+  <svg id="introArt" viewBox="0 0 210 125" aria-hidden="true"></svg>
+  <h1>ISL Translator</h1>
+  <p>Indian Sign Language, recognized in your browser.</p>
+  <button id="skipIntro" type="button">Skip</button>
+</div>
+
+<header class="top">
+  <div class="brand"><svg width="30" height="20" viewBox="0 0 30 20" aria-hidden="true"><circle cx="9" cy="10" r="7" fill="var(--blue)"/><circle cx="21" cy="10" r="7" fill="var(--saffron)" fill-opacity=".9"/></svg><span>ISL Translator</span></div>
+  <a class="btn ghost" href="record.html">Record signs</a>
+  <span class="pill" id="conn"><i></i><span id="connText">Connecting</span></span>
+  <button class="btn ghost" id="themeBtn" type="button">Dark mode</button>
+</header>
+
+<main>
+  <section class="stage" aria-label="Camera">
+    <div class="media mirror" id="media">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="idle" id="idle">Start the camera or choose a video file.</div>
+      <div class="caption" aria-live="polite"><div class="word dim" id="word">Waiting for a sign</div><div class="sub" id="near"></div></div>
+    </div>
+    <div class="dock">
+      <button class="btn primary" id="camBtn" type="button">Start camera</button>
+      <label class="btn">Video file<input type="file" id="file" accept="video/*"></label>
+      <button class="btn" id="calBtn" type="button">Calibrate rest position</button>
+      <button class="btn" id="resetBtn" type="button">Reset</button>
+    </div>
+    <p class="note" id="hint" aria-live="polite">Tracking runs in this browser. Only landmark numbers go to the server, never video.</p>
+  </section>
+
+  <aside class="rail">
+    <section><h2>Transcript</h2>
+      <p class="transcript empty" id="sentence">Recognized words will collect here.</p>
+      <div class="row"><button class="btn" id="copyBtn" type="button">Copy</button><button class="btn" id="clearBtn" type="button">Clear</button><button class="btn" id="dlBtn" type="button">Download landmarks</button></div>
+    </section>
+    <section><h2>Top guesses</h2><div class="bars" id="bars"><p class="note">Sign a word to see the model's guesses.</p></div></section>
+    <section><h2>Settings</h2>
+      <label for="thr">Accept a word at <strong id="thrv">50%</strong> confidence or more</label>
+      <input type="range" id="thr" min="0" max="95" step="5" value="50">
+      <label class="check"><input type="checkbox" id="mirror" checked> Mirror the preview</label>
+      <label class="check"><input type="checkbox" id="showLm" checked> Show tracked points</label>
+      <div class="legend"><span><i style="background:var(--blue)"></i>Left hand</span><span><i style="background:var(--saffron)"></i>Right hand</span></div>
+    </section>
+    <section><h2>Performance</h2>
+      <dl><dt>Tracking speed</dt><dd><span id="fps">-</span> frames/s</dd><dt>Hands tracked</dt><dd id="hands">-</dd>
+      <dt>Server time</dt><dd><span id="srv">-</span> ms</dd><dt>Frames in last sign</dt><dd id="nframes">-</dd>
+      <dt>Hand movement in last sign</dt><dd id="motion">-</dd><dt>Rest line</dt><dd id="rest">1.6 (default)</dd></dl>
+    </section>
+  </aside>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/holistic.js" crossorigin="anonymous"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,10 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Record signs: ISL Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/record.css">
 </head>
 <body>
-$END$
+<header class="top">
+  <div class="brand"><svg width="30" height="20" viewBox="0 0 30 20" aria-hidden="true"><circle cx="9" cy="10" r="7" fill="var(--blue)"/><circle cx="21" cy="10" r="7" fill="var(--saffron)" fill-opacity=".9"/></svg><span>Record signs</span></div>
+  <a class="btn ghost" href="index.html">Back to the translator</a>
+  <span class="pill" id="conn"><i></i><span id="connText">Checking server</span></span>
+  <button class="btn ghost" id="themeBtn" type="button">Dark mode</button>
+</header>
+
+<main>
+  <section class="stage" aria-label="Camera">
+    <div class="media mirror" id="media">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="idle" id="idle">Start the camera to begin recording.</div>
+      <div class="caption" aria-live="polite"><div class="word dim" id="word">Ready</div><div class="sub" id="sub"></div></div>
+    </div>
+    <div class="dock">
+      <button class="btn primary" id="camBtn" type="button">Start camera</button>
+      <button class="btn" id="recBtn" type="button" disabled>Record a take</button>
+    </div>
+    <p class="note" id="hint">Choose the word, start the camera, then record. Sit or stand the way you will when using the translator. Space also starts and stops a take.</p>
+  </section>
+
+  <aside class="rail">
+    <section>
+      <h2>Word</h2>
+      <label for="wordSel">Which word are you signing?</label>
+      <select id="wordSel"></select>
+      <input type="text" id="label" placeholder="Type the new word" autocomplete="off" maxlength="40" hidden aria-label="New word">
+      <label for="hand">Hand you sign with</label>
+      <select id="hand"><option value="right">Right hand</option><option value="left">Left hand</option><option value="both">Both hands</option></select>
+      <p class="note" id="count">No takes saved for this word yet.</p>
+    </section>
+    <section>
+      <h2>Recording</h2>
+      <label for="cdSel">Countdown before each take</label>
+      <select id="cdSel"><option value="3">3 seconds</option><option value="5" selected>5 seconds</option><option value="10">10 seconds</option></select>
+      <label for="lenSel">Take length</label>
+      <select id="lenSel"><option value="3">3 seconds</option><option value="4" selected>4 seconds</option><option value="5">5 seconds</option><option value="6">6 seconds</option></select>
+      <label for="nSel">Takes in a row</label>
+      <select id="nSel"><option value="1" selected>1, review it yourself</option><option value="3">3, saved automatically</option><option value="5">5, saved automatically</option><option value="10">10, saved automatically</option></select>
+      <p class="note">A beep marks each countdown step, the start of the take and its end. Automatic takes are trimmed to the signing and skipped if your hands were not tracked well.</p>
+    </section>
+    <section id="review" hidden>
+      <h2>Review the take</h2>
+      <canvas id="pv" width="320" height="180" aria-label="Preview of the selected frame"></canvas>
+      <label for="trimA">Start of the sign</label>
+      <input type="range" id="trimA" min="0" max="0" value="0">
+      <label for="trimB">End of the sign</label>
+      <input type="range" id="trimB" min="0" max="0" value="0">
+      <dl><dt>Frames kept</dt><dd id="rFrames">-</dd><dt>Length kept</dt><dd id="rSecs">-</dd><dt>Hands tracked</dt><dd id="rHands">-</dd></dl>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="saveBtn" type="button">Save take</button><button class="btn" id="discardBtn" type="button">Discard</button></div>
+    </section>
+    <section>
+      <h2>Saved so far</h2>
+      <p class="note" id="total">Loading</p>
+      <div class="bars" id="saved"></div>
+    </section>
+  </aside>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5.1675471629/holistic.js" crossorigin="anonymous"></script>
+<script type="module" src="js/record.js"></script>
 </body>
 </html>

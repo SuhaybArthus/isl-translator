@@ -1,11 +1,25 @@
+# Virtual Environments
 .venv/
 .venv-onnx/
+
+# Environment & Secrets
+.env
+
+# IDEs & Editors
 .idea/
+.vscode/
+
+# Python Cache & Testing
 __pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Datasets & Outputs
 /data/
-/models/
 /outputs/
-/models/*
-!/models/full_tf_s1.onnx
-!/models/full_tf_s1.meta.json
 *.npy
+
+# Model Checkpoints (Ignore all files in /models except production baseline ONNX + metadata)
+/models/*
+!/models/final_v1.onnx
+!/models/final_v1.meta.json

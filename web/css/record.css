@@ -1,0 +1,9 @@
+.rail input,.rail select{width:100%;font:inherit;font-size:.9rem;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:3px;padding:10px 12px;margin:6px 0 16px}
+.rail select option{background:var(--surface);color:var(--ink)}
+.rail section[hidden]{display:none}
+.rail .note{margin-top:0}
+.media.recording{box-shadow:0 0 0 4px #C0483A}
+.media.recording .word{color:#fff}
+.top .btn.ghost{text-decoration:none}
+.rail input[type=range]{border:0;padding:0;margin:6px 0 14px;accent-color:var(--ink)}
+#pv{display:block;width:100%;aspect-ratio:16/9;background:#0B0A09;border-radius:6px;margin-bottom:14px}
