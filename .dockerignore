@@ -1,7 +1,13 @@
 .venv
 .venv-onnx
 .git
+.github
+.idea
 data
 outputs
 notebooks
+scripts
+tests
 __pycache__
+*.pt
+models/*.pt

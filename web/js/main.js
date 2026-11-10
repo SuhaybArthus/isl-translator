@@ -10,6 +10,7 @@ const IGNORED = {
   hands: "Your hands were not in view enough to recognize a sign.",
   "no sign": "That did not look like a sign.",
 };
+let serverBusy = false, idleClosed = false;
 let ws = null, open = false, words = [], recorded = [], restLine = null;
 let cal = null, fpsEma = 0, lastT = 0, toastTimer = 0;
 
@@ -27,8 +28,13 @@ const hint = (m) => { $("hint").textContent = m; };
 function connect() {
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
   ws.binaryType = "arraybuffer";
-  ws.onopen = () => { open = true; setConn(true); if (restLine) sendJson({ cmd: "config", rest_line: restLine }); };
-  ws.onclose = () => { open = false; setConn(false); media.classList.remove("signing"); setTimeout(connect, 1000); };
+  ws.onopen = () => { open = true; idleClosed = false; setConn(true); if (restLine) sendJson({ cmd: "config", rest_line: restLine }); };
+  ws.onclose = () => {
+    open = false; setConn(false); media.classList.remove("signing");
+    if (serverBusy) $("connText").textContent = "Server busy, retrying";
+    if (idleClosed) { $("connText").textContent = "Disconnected while idle"; return; }   // reconnects when the camera starts
+    setTimeout(connect, serverBusy ? 5000 : 1000); serverBusy = false;
+  };
   ws.onmessage = (e) => handle(JSON.parse(e.data));
 }
 const sendJson = (o) => open && ws.send(JSON.stringify(o));
@@ -44,7 +50,9 @@ function handle(m) {
     $("bars").replaceChildren(Object.assign(document.createElement("p"), { className: "note", textContent: IGNORED[m.reason] || IGNORED.still }));
     $("word").textContent = "Waiting for a sign"; $("word").classList.add("dim");
     $("near").textContent = "";
-  } else if (m.type === "error") hint("Server rejected a frame: " + m.detail);
+  } else if (m.type === "busy") serverBusy = true;
+  else if (m.type === "idle") idleClosed = true;
+  else if (m.type === "error") hint("Server rejected a frame: " + m.detail);
 }
 
 /* ---- results ---- */
@@ -163,8 +171,9 @@ $("video").addEventListener("loadedmetadata", () => {
 });
 
 /* ---- buttons ---- */
-$("camBtn").addEventListener("click", () => (tracker.running ? tracker.stop() : tracker.startCam()));
-$("file").addEventListener("change", (e) => { if (e.target.files[0]) tracker.startFile(e.target.files[0]); e.target.value = ""; });
+function ensureConnected() { if (!ws || ws.readyState > 1) { idleClosed = false; connect(); } }
+$("camBtn").addEventListener("click", () => { if (tracker.running) tracker.stop(); else { ensureConnected(); tracker.startCam(); } });
+$("file").addEventListener("change", (e) => { if (e.target.files[0]) { ensureConnected(); tracker.startFile(e.target.files[0]); } e.target.value = ""; });
 function startCalibration() {
   cal = []; $("calBtn").textContent = "Hold still...";
   toast("Let your hands rest as they normally do for two seconds.", 2500);

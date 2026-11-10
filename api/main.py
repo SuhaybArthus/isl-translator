@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import time
+from collections import deque
 
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
@@ -22,7 +23,7 @@ sys.path.insert(0, ROOT)
 
 import numpy as np
 import onnxruntime as ort
-from fastapi import FastAPI, HTTPException, Request, WebSocket
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from src.inference.handedness import hand_share, mirrored, wrist_motion, wrist_travel
@@ -37,6 +38,10 @@ HAND_K = float(os.environ.get("ISL_HAND_K", "1.5"))              # how clearly o
 RECORDING = os.environ.get("ISL_RECORDING", "1") == "1"                # set to 0 on any shared or public server
 MIN_HANDS = float(os.environ.get("ISL_MIN_HANDS", "0.5"))          # share of frames with a tracked hand
 NO_SIGN = "No sign"                                               # class for idle behaviour, if the model has it
+MAX_CONNECTIONS = int(os.environ.get("ISL_MAX_CONNECTIONS", "10"))   # simultaneous websocket clients
+IDLE_SECONDS = float(os.environ.get("ISL_IDLE_SECONDS", "60"))        # close a socket that sends nothing for this long
+MAX_FPS = int(os.environ.get("ISL_MAX_FPS", "100"))                   # messages per second per client
+ACTIVE = 0
 TOPK, N_FEAT = 5, 225
 
 meta = json.load(open(os.path.join(ROOT, "models", f"{MODEL}.meta.json"), encoding="utf-8"))
@@ -50,7 +55,8 @@ app = FastAPI(title="ISL recognition")
 @app.get("/health")
 def health():
     return {"status": "ok", "model": MODEL, "variant": VARIANT or "fp32",
-            "classes": len(LABELS), "seq_len": meta["seq_len"]}
+            "classes": len(LABELS), "seq_len": meta["seq_len"],
+            "connections": ACTIVE, "max_connections": MAX_CONNECTIONS}
 
 
 def run_probs(x):
@@ -80,15 +86,26 @@ def predict(segment):
             "latency_ms": round((time.perf_counter() - t) * 1000, 2)}
 
 
-@app.websocket("/ws")
-async def ws_endpoint(ws: WebSocket):
-    await ws.accept()
+async def serve(ws: WebSocket):
     rest = 1.6
     seg, was_active = SignSegmenter(rest_line=rest), False
+    recent = deque()                                   # arrival times in the last second
     while True:
-        msg = await ws.receive()
+        try:
+            msg = await asyncio.wait_for(ws.receive(), timeout=IDLE_SECONDS)
+        except asyncio.TimeoutError:                   # nothing arrived for a while: free the slot
+            await ws.send_json({"type": "idle", "detail": "Closed after being idle."})
+            await ws.close(code=1000)
+            return
         if msg["type"] == "websocket.disconnect":
-            break
+            return
+        now = time.monotonic()
+        recent.append(now)
+        while recent and now - recent[0] > 1.0:
+            recent.popleft()
+        if len(recent) > MAX_FPS:                      # a real client sends about 25 a second
+            await ws.send_json({"type": "error", "detail": "too many messages per second"})
+            continue
         try:
             if msg.get("bytes") is not None:
                 frame = np.frombuffer(msg["bytes"], dtype=np.float32)
@@ -126,6 +143,23 @@ async def ws_endpoint(ws: WebSocket):
             else:
                 out["motion"] = round(m, 2)
                 await ws.send_json(out)
+
+
+@app.websocket("/ws")
+async def ws_endpoint(ws: WebSocket):
+    global ACTIVE
+    await ws.accept()
+    if ACTIVE >= MAX_CONNECTIONS:                      # refuse politely so the page can say why
+        await ws.send_json({"type": "busy", "detail": f"The server is at its limit of {MAX_CONNECTIONS} connections."})
+        await ws.close(code=1013)
+        return
+    ACTIVE += 1
+    try:
+        await serve(ws)
+    except (WebSocketDisconnect, RuntimeError):        # the browser went away in the middle of a reply
+        pass
+    finally:
+        ACTIVE -= 1
 
 
 # ---- recording page: save your own takes in the same keypoint format as data/processed ----

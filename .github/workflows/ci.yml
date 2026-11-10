@@ -1,7 +1,10 @@
-name: tests
-on: [push, pull_request]
+name: ci
+on:
+  push:
+  pull_request:
+
 jobs:
-  test:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -10,3 +13,20 @@ jobs:
           python-version: "3.11"
       - run: pip install numpy pytest
       - run: python -m pytest tests/test_segment.py tests/test_preprocess_unit.py tests/test_handedness.py
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t isl-translator .
+      - name: Start the container and check it answers
+        run: |
+          docker run -d --name isl -p 8000:8000 isl-translator
+          for i in $(seq 1 30); do curl -fsS http://localhost:8000/health && break; sleep 1; done
+          curl -fsS http://localhost:8000/health | grep -q '"status":"ok"'
+          curl -fsS http://localhost:8000/ | grep -q "ISL Translator"
+          curl -fsS http://localhost:8000/api/labels | grep -q "Hello"
+      - name: Show the container log if anything failed
+        if: failure()
+        run: docker logs isl
